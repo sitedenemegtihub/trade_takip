@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trade Takvimi</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --accent-color: #38bdf8;
+            --green: #22c55e;
+            --red: #ef4444;
+            --green-bg: rgba(34, 197, 94, 0.15);
+            --red-bg: rgba(239, 68, 68, 0.15);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            /* Mobilde kaydırma lastik efekti için */
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* --- ÜST KISIM --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #334155;
+        }
+        .header h1 { font-size: 1.2rem; margin: 0; }
+        .header small { display: block; margin-top: 4px; font-size: 0.85rem; }
+        
+        .nav-link { 
+            color: var(--accent-color); 
+            text-decoration: none; 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            padding: 8px 12px;
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 8px;
+        }
+
+        /* --- İSTATİSTİKLER --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* Masaüstünde 4 yan yana */
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card { 
+            background-color: var(--card-bg); 
+            padding: 12px; 
+            border-radius: 10px; 
+            text-align: center; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .stat-value { font-size: 1.1rem; font-weight: 700; margin-top: 4px; }
+        .stat-label { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .text-green { color: var(--green); }
+        .text-red { color: var(--red); }
+
+        /* --- VERİ GİRİŞİ --- */
+        .input-group {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            align-items: center;
+        }
+        
+        input { 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 1px solid #334155; 
+            background: #0f172a; 
+            color: white; 
+            font-size: 1rem;
+            outline: none;
+        }
+        input:focus { border-color: var(--accent-color); }
+        
+        button { 
+            padding: 12px 20px; 
+            background-color: var(--accent-color); 
+            color: #000; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.7; }
+
+        /* --- TAKVİM ALANI --- */
+        .calendar-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .calendar-header h2 { margin: 0; font-size: 1.1rem; }
+        .calendar-btn { 
+            background: #334155; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        /* Takvim Grid Yapısı */
+        .calendar-wrapper {
+            /* Mobilde Yatay Scroll için sihirli kısım */
+            overflow-x: auto;
+            padding-bottom: 10px; /* Scrollbar için boşluk */
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            /* Mobilde takvim sıkışmasın diye minimum genişlik veriyoruz */
+            min-width: 600px; 
+        }
+
+        .day-name {
+            text-align: center;
+            font-weight: bold;
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .calendar-day {
+            background-color: #252f45;
+            min-height: 85px; /* Kutu yüksekliği */
+            border-radius: 6px;
+            padding: 6px;
+            position: relative;
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .day-number { font-weight: bold; color: #64748b; font-size: 0.8rem; }
+        .day-pnl { font-size: 0.95rem; font-weight: 800; }
+        .day-percent { font-size: 0.75rem; font-weight: 500; opacity: 0.9; }
+
+        /* Renklendirmeler */
+        .win-day { background-color: var(--green-bg); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .loss-day { background-color: var(--red-bg); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .win-text { color: #4ade80; } /* Daha parlak yeşil */
+        .loss-text { color: #f87171; } /* Daha parlak kırmızı */
+
+        .delete-day {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            color: #64748b;
+            font-size: 0.8rem;
+            padding: 2px 5px;
+        }
+
+        /* --- MOBİL UYUMLULUK (Responsive) --- */
+        @media (max-width: 768px) {
+            /* İstatistikler 2x2 olsun */
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            /* Giriş alanları alt alta olsun */
+            .input-group {
+                flex-direction: column;
+                align-items: stretch; /* Tam genişlik */
+            }
+
+            input, button { width: 100%; }
+            
+            /* Mobilde takvim yazılarını biraz küçült */
+            .calendar-day { min-height: 75px; }
+            .day-pnl { font-size: 0.85rem; }
+            .day-percent { font-size: 0.7rem; }
+            
+            /* Takvim scroll uyarısı (isteğe bağlı görsel ipucu) */
+            .calendar-wrapper::-webkit-scrollbar { height: 4px; }
+            .calendar-wrapper::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>📊 Kasa Yönetimi</h1>
+            <small style="color:#94a3b8">Başlangıç: <span style="color:white">$220.00</span></small>
+        </div>
+        <a href="/" class="nav-link">Piyasa</a>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Güncel Kasa</div>
+            <div class="stat-value" id="currentBalance">...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Toplam P&L</div>
+            <div class="stat-value" id="totalPnL">...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Bu Ay</div>
+            <div class="stat-value" id="monthlyPnL">...</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Büyüme</div>
+            <div class="stat-value" id="roi">...</div>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <input type="date" id="tradeDate">
+        <input type="number" id="tradeProfit" placeholder="Tutar ($) (Örn: 15 veya -5)">
+        <input type="text" id="tradeNote" placeholder="Not (Örn: XAUUSD Short)">
+        <button onclick="addTrade()">Ekle</button>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button class="calendar-btn" onclick="changeMonth(-1)">❮</button>
+            <h2 id="monthYearDisplay"></h2>
+            <button class="calendar-btn" onclick="changeMonth(1)">❯</button>
+        </div>
+
+        <div class="calendar-wrapper">
+            <div class="calendar-grid" id="calendarGrid">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const START_BALANCE = 220.00;
+        let tradesData = [];
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        async function loadData() {
+            try {
+                const res = await fetch('/api/trades');
+                tradesData = await res.json();
+                renderCalendar();
+                calculateStats();
+            } catch (e) {
+                console.error("Veri yüklenemedi");
+            }
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const display = document.getElementById('monthYearDisplay');
+            
+            const date = new Date(currentYear, currentMonth);
+            display.innerText = date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+
+            // Başlıkları tekrar yaz
+            grid.innerHTML = `
+                <div class="day-name">Pzt</div><div class="day-name">Sal</div><div class="day-name">Çar</div>
+                <div class="day-name">Per</div><div class="day-name">Cum</div><div class="day-name">Cmt</div><div class="day-name">Paz</div>
+            `;
+
+            let firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); 
+            firstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            // Boşluklar
+            for (let i = 0; i < firstDayIndex; i++) {
+                grid.innerHTML += `<div class="calendar-day" style="background:transparent; border:none; min-height:0;"></div>`;
+            }
+
+            // Günler
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTrade = getDayTradeSummary(dateStr);
+                
+                let content = `<div class="day-number">${day}</div>`;
+                let className = 'calendar-day';
+
+                if (dayTrade) {
+                    const isWin = dayTrade.total >= 0;
+                    className += isWin ? ' win-day' : ' loss-day';
+                    const sign = isWin ? '+' : '';
+                    
+                    content += `
+                        <div>
+                            <div class="day-pnl ${isWin ? 'win-text' : 'loss-text'}">${sign}$${dayTrade.total.toFixed(0)}</div>
+                            <div class="day-percent ${isWin ? 'win-text' : 'loss-text'}">%${dayTrade.percent}</div>
+                        </div>
+                        <div class="delete-day" onclick="deleteDayTrades('${dateStr}')">×</div>
+                    `;
+                }
+                grid.innerHTML += `<div class="${className}">${content}</div>`;
+            }
+        }
+
+        function calculateStats() {
+            let balance = START_BALANCE;
+            let totalPnL = 0;
+            let monthlyPnL = 0;
+
+            tradesData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            tradesData.forEach(trade => {
+                const profit = parseFloat(trade.profit);
+                balance += profit;
+                totalPnL += profit;
+
+                const tDate = new Date(trade.date);
+                if (tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
+                    monthlyPnL += profit;
+                }
+            });
+
+            document.getElementById('currentBalance').innerText = `$${balance.toFixed(2)}`;
+            
+            const pnlEl = document.getElementById('totalPnL');
+            pnlEl.innerText = (totalPnL >= 0 ? '+' : '') + `$${totalPnL.toFixed(2)}`;
+            pnlEl.className = 'stat-value ' + (totalPnL >= 0 ? 'text-green' : 'text-red');
+
+            const monthEl = document.getElementById('monthlyPnL');
+            monthEl.innerText = (monthlyPnL >= 0 ? '+' : '') + `$${monthlyPnL.toFixed(2)}`;
+            monthEl.className = 'stat-value ' + (monthlyPnL >= 0 ? 'text-green' : 'text-red');
+
+            const roi = ((balance - START_BALANCE) / START_BALANCE) * 100;
+            const roiEl = document.getElementById('roi');
+            roiEl.innerText = `%${roi.toFixed(1)}`;
+            roiEl.className = 'stat-value ' + (roi >= 0 ? 'text-green' : 'text-red');
+        }
+
+        function getDayTradeSummary(dateStr) {
+            let balanceBeforeThatDay = START_BALANCE;
+            const sortedTrades = [...tradesData].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let dayTotal = 0;
+            let found = false;
+
+            for (let trade of sortedTrades) {
+                if (trade.date < dateStr) {
+                    balanceBeforeThatDay += parseFloat(trade.profit);
+                } else if (trade.date === dateStr) {
+                    dayTotal += parseFloat(trade.profit);
+                    found = true;
+                }
+            }
+
+            if (!found) return null;
+            const percent = (dayTotal / balanceBeforeThatDay) * 100;
+            return { total: dayTotal, percent: percent.toFixed(1) };
+        }
+
+        async function addTrade() {
+            const date = document.getElementById('tradeDate').value;
+            const profit = document.getElementById('tradeProfit').value;
+            const note = document.getElementById('tradeNote').value;
+
+            if(!date || !profit) return alert("Eksik bilgi!");
+
+            await fetch('/api/trades', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date, profit, note })
+            });
+
+            document.getElementById('tradeProfit').value = '';
+            document.getElementById('tradeNote').value = '';
+            loadData();
+        }
+
+        async function deleteDayTrades(dateStr) {
+            if(!confirm(`Silinsin mi?`)) return;
+            const index = tradesData.findIndex(t => t.date === dateStr);
+            if (index > -1) {
+                 await fetch('/api/trades/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index })
+                });
+                loadData();
+            }
+        }
+
+        function changeMonth(dir) {
+            currentMonth += dir;
+            if(currentMonth > 11) { currentMonth = 0; currentYear++; }
+            if(currentMonth < 0) { currentMonth = 11; currentYear--; }
+            renderCalendar();
+            calculateStats();
+        }
+
+        document.getElementById('tradeDate').valueAsDate = new Date();
+        loadData();
+    </script>
+</body>
+</html>
