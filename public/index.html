@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Canlı Piyasa Paneli</title>
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-color: #f1f5f9;
+        --accent-color: #38bdf8;
+        --up-color: #4ade80;
+        --down-color: #f87171;
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+      }
+
+      .container {
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 20px;
+      }
+
+      /* Kartlar */
+      .market-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 15px;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card-title {
+        font-size: 0.9rem;
+        color: #94a3b8;
+      }
+      .card-price {
+        font-size: 1.6rem;
+        font-weight: bold;
+        margin: 10px 0;
+      }
+      .card-change {
+        font-size: 0.95rem;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .up {
+        color: var(--up-color);
+        background: rgba(74, 222, 128, 0.1);
+      }
+      .down {
+        color: var(--down-color);
+        background: rgba(248, 113, 113, 0.1);
+      }
+
+      /* Haberler */
+      .news-section {
+        background-color: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+      }
+      .news-item {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 15px;
+      }
+      .news-item:last-child {
+        border: none;
+      }
+      .news-link {
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+        transition: color 0.2s;
+      }
+      .news-link:hover {
+        color: var(--accent-color);
+      }
+      .news-meta {
+        font-size: 0.8rem;
+        color: #94a3b8;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Loading Animasyonu */
+      .loading {
+        text-align: center;
+        color: #64748b;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1 style="margin: 0">Canlı Finans Piyasaları</h1>
+        <small style="color: #64748b">Node.js & Yahoo Finance API</small>
+      </div>
+      <a
+        href="/journal.html"
+        style="
+          color: #38bdf8;
+          text-decoration: none;
+          font-weight: bold;
+          border: 1px solid #38bdf8;
+          padding: 5px 10px;
+          border-radius: 5px;
+        "
+      >
+        📒 Trade Günlüğü
+      </a>
+      <div id="status" style="font-size: 0.9rem; color: #facc15">
+        Bağlanıyor...
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="market-grid" id="marketGrid">
+        <div class="loading">Veriler Yükleniyor...</div>
+      </div>
+
+      <div class="news-section">
+        <h3 style="margin-top: 0">Piyasa Haberleri</h3>
+        <div id="newsList">
+          <div class="loading">Haberler Yükleniyor...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // API'den veri çekme fonksiyonu
+      async function fetchMarketData() {
+        try {
+          const response = await fetch("/api/prices");
+          const data = await response.json();
+          renderPrices(data);
+          document.getElementById("status").innerText = "Canlı ●";
+          document.getElementById("status").style.color = "#4ade80";
+        } catch (error) {
+          console.error("Veri hatası:", error);
+          document.getElementById("status").innerText = "Bağlantı Hatası";
+          document.getElementById("status").style.color = "#f87171";
+        }
+      }
+
+      async function fetchNewsData() {
+        try {
+          const response = await fetch("/api/news");
+          const data = await response.json();
+          renderNews(data);
+        } catch (error) {
+          console.error("Haber hatası:", error);
+        }
+      }
+
+      function renderPrices(data) {
+        const grid = document.getElementById("marketGrid");
+        grid.innerHTML = "";
+
+        data.forEach((item) => {
+          const isUp = item.change >= 0;
+          const changeClass = isUp ? "up" : "down";
+          const sign = isUp ? "+" : "";
+
+          // Sayıları formatla
+          const priceFmt = item.price.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+          const changeFmt = item.change.toFixed(2);
+
+          const html = `
+                    <div class="card">
+                        <div class="card-title">${item.name}</div>
+                        <div class="card-price">$${priceFmt}</div>
+                        <div class="card-change ${changeClass}">
+                            ${sign}%${changeFmt}
+                        </div>
+                    </div>
+                `;
+          grid.innerHTML += html;
+        });
+      }
+
+      function renderNews(news) {
+        const list = document.getElementById("newsList");
+        list.innerHTML = "";
+
+        news.forEach((item) => {
+          // Zaman damgasını tarihe çevir
+          const date = new Date(item.time * 1000).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          const html = `
+                    <div class="news-item">
+                        <a href="${item.link}" target="_blank" class="news-link">${item.title}</a>
+                        <div class="news-meta">${item.publisher} • ${date}</div>
+                    </div>
+                `;
+          list.innerHTML += html;
+        });
+      }
+
+      // Başlangıç
+      fetchMarketData();
+      fetchNewsData();
+
+      // 10 Saniyede bir fiyatları güncelle
+      setInterval(fetchMarketData, 10000);
+      // 5 Dakikada bir haberleri güncelle
+      setInterval(fetchNewsData, 300000);
+    </script>
+  </body>
+</html>
